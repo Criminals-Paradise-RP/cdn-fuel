@@ -2,7 +2,7 @@ Config = {}
 Config.FuelDebug = false -- Used for debugging, although there are not many areas in yet (Default: false) + Enables Setfuel Commands (0, 50, 100). 
 Config.PolyDebug = false -- Enables Polyzone Debugging to see PolyZones!
 Config.ShowNearestGasStationOnly = true -- When enabled, only the nearest gas stations will be shown on the map.
-Config.LeaveEngineRunning = false -- When true, the vehicle's engine will be left running upon exit if the player *HOLDS* F.
+Config.LeaveEngineRunning = true -- When true, the vehicle's engine will be left running upon exit if the player *HOLDS* F.
 Config.VehicleBlowUp = true -- When true, there will be a configurable chance of the vehicle blowing up, if you fuel while the engine is on.
 Config.BlowUpChance = 5 -- Percentage for Chance of Engine Explosion (Default: 5% or 5)
 Config.CostMultiplier = 3 -- Amount to multiply 1 by. This indicates fuel price. (Default: $3.0/l or 3.0)
@@ -45,23 +45,23 @@ Config.EmergencyServicesDiscount = {
     ['job'] = {
         "police",
         "sasp",
-        "trooper",
-        "ambulance",
+        "sapr",
+        "bcso",
     }
 }
 Config.Core = 'qb-core' -- Change this to your core resources (Ex: 'qbx-core' | 'qb-core'), must be qb based!
 Config.Ox = {
-    Inventory = false, -- Uses OX_Inventory's metadata instead of QB-Inventory's.
-    Menu = false, -- Uses OX Libraries instead of qb-menu.
-    Input = false, -- Uses Ox Input Dialog instead of qb-input.
-    DrawText = false, -- Uses Ox DrawText instead of qb-core DrawText.
+    Inventory = false, -- Uses OX_Inventory's metadata instead of ps-inventory's.
+    Menu = true, -- Uses OX Libraries instead of qb-menu.
+    Input = true, -- Uses Ox Input Dialog instead of qb-input.
+    DrawText = true, -- Uses Ox DrawText instead of qb-core DrawText.
     Progress = false -- Uses Ox ProgressBar instead of progressbar.
 }
-Config.TargetResource = "qb-target" -- Supported: { 'qb-target', 'ox_target'} -- Others must use the same format as QB-Target or manual configuration is required.
-Config.PumpHose = false -- If true, it creates a hose from the pump to the nozzle the client is holding, to give it a more realistic feel.
+Config.TargetResource = "ox_target" -- Supported: { 'qb-target', 'ox_target'} -- Others must use the same format as QB-Target or manual configuration is required.
+Config.PumpHose = true -- If true, it creates a hose from the pump to the nozzle the client is holding, to give it a more realistic feel.
 Config.RopeType = { -- Options: 1-2-3-4-5; 1: Khaki Color, Kind of Thick, 2: Very Thick Khaki Rope, 3: Very Thick Black Rope, 4: Very Thin Black Rope, 5: Same as 3
-    ['fuel'] = 1,
-    ['electric'] = 1,
+    ['fuel'] = 4,
+    ['electric'] = 3,
 }
 Config.FaceTowardsVehicle = true -- Ped will turn towards the entity's boot bone for refueling, sometimes can result in incorrect nozzle placement when refueling.
 Config.VehicleShutoffOnLowFuel = { -- If enabled, vehicles will turn off when the reach 0 fuel. This works well in conjuction with disallowing people to turn on a vehicle with 0 fuel.
@@ -80,7 +80,7 @@ Config.VehicleShutoffOnLowFuel = { -- If enabled, vehicles will turn off when th
 Config.RenewedPhonePayment = false -- Enables use of Renewed-Phone Payment System and Notifications
 
 -- Syphoning --
-Config.UseSyphoning = false -- Follow the Syphoning Install Guide to enable this option!
+Config.UseSyphoning = true -- Follow the Syphoning Install Guide to enable this option!
 Config.SyphonDebug = false -- Used for Debugging the syphon portion!
 Config.SyphonKitCap = 50 -- Maximum amount (in L) the syphon kit can fit!
 Config.SyphonPoliceCallChance = 25 -- Math.Random(1, 100) Default: 25%
@@ -139,6 +139,15 @@ Config.ElectricVehicles = { -- The list of Electric Vehicles in the base game. Y
     "imorgon",
     "dilettante",
     "khamelion",
+    -- Custom Cars
+    "gmcev4",
+    "cybertruck",
+    "hummersuv",
+    "Mache",
+    "teslax",
+    "ocnetrongt",
+    "x3mache21",
+    "lamodels",
 }
 Config.ElectricSprite = 620 -- This is for when the player is in an electric charger, the blips with change to this sprite. (Sprite with a car with a bolt going through it: 620)
 Config.ElectricChargerModel = true -- If you wish, you can set this to false to add your own props, or use a ymap for the props instead.
@@ -1373,7 +1382,6 @@ Config.GasStations = { -- Configuration options for various gas station related 
         electricchargercoords = vector4(-341.63, -1459.39, 29.76, 271.73),
         label = "Alta Street Globe Oil",
     },
-    --[[
     [28] = { -- Gabz Ottos Autos Location, Line In If Needed.
         zones = {
             vector2(794.27795410156, -802.88677978516),
@@ -1398,7 +1406,28 @@ Config.GasStations = { -- Configuration options for various gas station related 
         electricchargercoords = vector4(837.7554, -793.623, 25.23, 105.22),
         label = "Ottos Autos Globe Oil",
     },
-    ]]
+    [29] = {
+        zones = {
+            vector2(184.47, -851.14),
+            vector2(170.83, -891.67),
+            vector2(238.64, -927.27),
+            vector2(256.06, -877.27)
+        },
+        minz = 27.0,
+        maxz = 33.0,
+        pedmodel = "a_m_m_indian_01", -- This is the model of the ped that will be created for the management menu @ the gas station.
+        cost = 100000, -- This is the cost of the gas station for someone purchasing it, not including tax.
+        shutoff = false, -- Leave as false, this is for when someone turns off the pumps. 
+        pedcoords = { -- Vector4, X, Y, Z & Heading.
+            x = 234.2,
+            y = -902.8,
+            z = 28.65,
+            h = 47.63,
+        },
+        electriccharger = nil, -- Leave this as nil.
+        electricchargercoords = vector4(222.66, -866.06, 29.67, 161.03), -- This is the location of the electric charger.
+        label = "Legion Square Gas Station", -- This is the default label, before someone changes the name.
+    },
     --[[
     [29] = { -- Car Meet Location, Line In If Needed.
         zones = {
