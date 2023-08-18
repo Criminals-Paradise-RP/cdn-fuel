@@ -1425,7 +1425,7 @@ Config.GasStations = { -- Configuration options for various gas station related 
             h = 47.63,
         },
         electriccharger = nil, -- Leave this as nil.
-        electricchargercoords = vector4(222.66, -866.06, 29.67, 161.03), -- This is the location of the electric charger.
+        electricchargercoords = vector4(222.66, -866.06, 28.67, 161.03), -- This is the location of the electric charger.
         label = "Legion Square Gas Station", -- This is the default label, before someone changes the name.
     },
     --[[
