@@ -148,6 +148,9 @@ Config.ElectricVehicles = { -- The list of Electric Vehicles in the base game. Y
     "ocnetrongt",
     "x3mache21",
     "lamodels",
+    "p90d",
+    "teslapd",
+    "tr22",
 }
 Config.ElectricSprite = 620 -- This is for when the player is in an electric charger, the blips with change to this sprite. (Sprite with a car with a bolt going through it: 620)
 Config.ElectricChargerModel = true -- If you wish, you can set this to false to add your own props, or use a ymap for the props instead.
@@ -1405,28 +1408,6 @@ Config.GasStations = { -- Configuration options for various gas station related 
         electriccharger = nil,
         electricchargercoords = vector4(837.7554, -793.623, 25.23, 105.22),
         label = "Ottos Autos Globe Oil",
-    },
-    [29] = {
-        zones = {
-            vector2(184.47, -851.14),
-            vector2(170.83, -891.67),
-            vector2(238.64, -927.27),
-            vector2(256.06, -877.27)
-        },
-        minz = 27.0,
-        maxz = 33.0,
-        pedmodel = "a_m_m_indian_01", -- This is the model of the ped that will be created for the management menu @ the gas station.
-        cost = 100000, -- This is the cost of the gas station for someone purchasing it, not including tax.
-        shutoff = false, -- Leave as false, this is for when someone turns off the pumps. 
-        pedcoords = { -- Vector4, X, Y, Z & Heading.
-            x = 234.2,
-            y = -902.8,
-            z = 28.65,
-            h = 47.63,
-        },
-        electriccharger = nil, -- Leave this as nil.
-        electricchargercoords = vector4(222.66, -866.06, 28.67, 161.03), -- This is the location of the electric charger.
-        label = "Legion Square Gas Station", -- This is the default label, before someone changes the name.
     },
     --[[
     [29] = { -- Car Meet Location, Line In If Needed.
