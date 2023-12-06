@@ -30,8 +30,8 @@ if Config.FuelDebug then
 		SetFuel(vehicle, tonumber(args[1]))
 		QBCore.Functions.Notify(Lang:t("set_fuel_debug")..' '..args[1]..'L', 'success')
 	end, false)
-
-	RegisterCommand('getCachedFuelPrice', function ()
+	
+	RegisterCommand('getCachedFuelPrice', function()
 		print(CachedFuelPrice)
 	end, false)
 
@@ -1638,7 +1638,7 @@ RegisterNetEvent('cdn-fuel:jerrycan:refueljerrycan', function(data)
 				QBCore.Functions.Notify(Lang:t("jerry_can_success"), 'success')
 				local srcPlayerData = QBCore.Functions.GetPlayerData()
 				if Config.Ox.Inventory then
-					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, 'jerrycan')
+					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, itemData)
 				else
 					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, itemData)
 				end
@@ -1702,8 +1702,9 @@ RegisterNetEvent('cdn-fuel:jerrycan:refueljerrycan', function(data)
 				QBCore.Functions.Notify(Lang:t("jerry_can_success"), 'success')
 				local jerryCanData = data.itemData
 				local srcPlayerData = QBCore.Functions.GetPlayerData()
+				local refuelAmount = tonumber(refuel.amount)
 				if Config.Ox.Inventory then
-					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, 'jerrycan')
+					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, jerryCanData)
 				else
 					TriggerServerEvent('cdn-fuel:info', "add", tonumber(refuelAmount), srcPlayerData, jerryCanData)
 				end
@@ -1755,19 +1756,16 @@ RegisterNetEvent('cdn-syphoning:syphon:menu', function(itemData)
 	if IsPedInAnyVehicle(PlayerPedId(), false) then QBCore.Functions.Notify(Lang:t("syphon_inside_vehicle"), 'error') return end
 	if Config.SyphonDebug then print("Item Data: " .. json.encode(itemData)) end
 	local vehicle = GetClosestVehicle()
-	local vehiclename = GetEntityModel(vehicle)
+	local vehModel = GetEntityModel(vehicle)
+	local vehiclename = string.lower(GetDisplayNameFromVehicleModel(vehModel))
 	local vehiclecoords = GetEntityCoords(vehicle)
 	local pedcoords = GetEntityCoords(PlayerPedId())
 	if Config.ElectricVehicleCharging then
 		NotElectric = true
-		for i = 1, #Config.ElectricVehicles do
-			local current = joaat(Config.ElectricVehicles[i])
-			if Config.SyphonDebug then print("^5Current Search: ^2"..current.." ^5Player's Vehicle: ^2"..vehiclename) end
-			if current == vehiclename then
-				NotElectric = false
-				if Config.SyphonDebug then print("^2"..current.. "^5 has been found. It ^2matches ^5the Player's Vehicle: ^2"..vehiclename..". ^5This means syphoning will not be allowed.") end
-				QBCore.Functions.Notify(Lang:t("syphon_electric_vehicle"), 'error', 7500) return
-			end
+		if Config.ElectricVehicles[vehiclename] and Config.ElectricVehicles[vehiclename].isElectric then
+			NotElectric = false
+			if Config.SyphonDebug then print("^2"..current.. "^5 has been found. It ^2matches ^5the Player's Vehicle: ^2"..vehiclename..". ^5This means syphoning will not be allowed.") end
+			QBCore.Functions.Notify(Lang:t("syphon_electric_vehicle"), 'error', 7500) return
 		end
 	else
 		NotElectric = true
@@ -1782,6 +1780,7 @@ RegisterNetEvent('cdn-syphoning:syphon:menu', function(itemData)
 			if tonumber(itemData.metadata.cdn_fuel) < 1 then nogas = true Nogasstring = Lang:t("menu_syphon_empty") else nogas = false Nogasstring = Lang:t("menu_syphon_refuel") end
 			if tonumber(itemData.metadata.cdn_fuel) == Config.SyphonKitCap then syphonfull = true Stealfuelstring = Lang:t("menu_syphon_kit_full") elseif GetFuel(vehicle) < 1 then syphonfull = true Stealfuelstring = Lang:t("menu_syphon_vehicle_empty") else syphonfull = false Stealfuelstring = Lang:t("menu_syphon_allowed") end -- Disable Options based on item data
 		else
+			if not itemData.info.gasamount then nogas = true Nogasstring = Lang:t("menu_syphon_empty") end
 			if itemData.info.gasamount < 1 then nogas = true Nogasstring = Lang:t("menu_syphon_empty") else nogas = false Nogasstring = Lang:t("menu_syphon_refuel") end
 			if itemData.info.gasamount == Config.SyphonKitCap then syphonfull = true Stealfuelstring = Lang:t("menu_syphon_kit_full") elseif GetFuel(vehicle) < 1 then syphonfull = true Stealfuelstring = Lang:t("menu_syphon_vehicle_empty") else syphonfull = false Stealfuelstring = Lang:t("menu_syphon_allowed") end -- Disable Options based on item data
 		end
@@ -1895,7 +1894,7 @@ RegisterNetEvent('cdn-syphoning:syphon', function(data)
 			currentsyphonamount = tonumber(data.itemData.metadata.cdn_fuel)
 			HasSyphon = exports.ox_inventory:Search('count', 'syphoningkit')
 		else
-			currentsyphonamount = data.itemData.info.gasamount
+			currentsyphonamount = data.itemData.info.gasamount or 0
 			HasSyphon = QBCore.Functions.HasItem("syphoningkit", 1)
 		end
 		
@@ -2227,7 +2226,173 @@ end)
 local AirSeaFuelZones = {}
 local vehicle = nil
 -- Create Polyzones with In-Out functions for handling fueling --
-CreateThread(function()
+
+AddEventHandler('onResourceStart', function(resource)
+   if resource == GetCurrentResourceName() then
+	  if LocalPlayer.state['isLoggedIn'] then
+		for i = 1, #Config.AirAndWaterVehicleFueling['locations'], 1 do
+			local currentLocation = Config.AirAndWaterVehicleFueling['locations'][i]
+			local k = #AirSeaFuelZones+1
+			local GeneratedName = "air_sea_fuel_zone_"..k
+	
+			AirSeaFuelZones[k] = {} -- Make a new table inside of the Vehicle Pullout Zones representing this zone.
+	
+			-- Get Coords for Zone from Config.
+			AirSeaFuelZones[k].zoneCoords = currentLocation['PolyZone']['coords']
+	
+			-- Grab MinZ & MaxZ from Config.
+			local minimumZ, maximumZ = currentLocation['PolyZone']['minmax']['min'], currentLocation['PolyZone']['minmax']['max']
+	
+			-- Create Zone
+			AirSeaFuelZones[k].PolyZone = PolyZone:Create(AirSeaFuelZones[k].zoneCoords, {
+				name = GeneratedName,
+				minZ = minimumZ,
+				maxZ = maximumZ,
+				debugPoly = Config.PolyDebug
+			})
+	
+			AirSeaFuelZones[k].name = GeneratedName
+	
+			-- Setup onPlayerInOut Events for zone that is created.
+			AirSeaFuelZones[k].PolyZone:onPlayerInOut(function(isPointInside)
+				if isPointInside then
+					local canUseThisStation = false
+					if Config.AirAndWaterVehicleFueling['locations'][i]['whitelist']['enabled'] then
+						local whitelisted_jobs = Config.AirAndWaterVehicleFueling['locations'][i]['whitelist']['whitelisted_jobs']
+						local plyJob = QBCore.Functions.GetPlayerData().job
+	
+						if Config.FuelDebug then
+							print("Player Job: "..plyJob.name.." Is on Duty?: "..json.encode(plyJob.onduty))
+						end
+	
+						if type(whitelisted_jobs) == "table" then
+							for i = 1, #whitelisted_jobs, 1 do
+								if plyJob.name == whitelisted_jobs[i] then
+									if Config.AirAndWaterVehicleFueling['locations'][i]['whitelist']['on_duty_only'] then
+										if plyJob.onduty == true then
+											canUseThisStation = true
+										else
+											canUseThisStation = false
+										end
+									else
+										canUseThisStation = true
+									end
+								end
+							end
+						end
+					else
+						canUseThisStation = true
+					end
+	
+					if canUseThisStation then
+						-- Inside
+						PlayerInSpecialFuelZone = true
+						inGasStation = true
+						RefuelingType = 'special'
+	
+						local DrawText = Config.AirAndWaterVehicleFueling['locations'][i]['draw_text']
+	
+						if Config.Ox.DrawText then
+							lib.showTextUI(DrawText, {
+								position = 'left-center'
+							})
+						else
+							exports[Config.Core]:DrawText(DrawText, 'left')
+						end
+						
+						CreateThread(function()
+							while PlayerInSpecialFuelZone do
+								Wait(3000)
+								vehicle = GetClosestVehicle()
+							end
+						end)
+	
+						CreateThread(function()
+							while PlayerInSpecialFuelZone do
+								Wait(0)
+								if PlayerInSpecialFuelZone ~= true then
+									break
+								end
+								if IsControlJustReleased(0, Config.AirAndWaterVehicleFueling['refuel_button']) --[[ Control in Config ]] then
+									local vehCoords = GetEntityCoords(vehicle)
+									local dist = #(GetEntityCoords(PlayerPedId()) - vehCoords) 
+									
+									if not HoldingSpecialNozzle then
+										QBCore.Functions.Notify(Lang:t("no_nozzle"), 'error', 1250)
+									elseif dist > 4.5 then
+										QBCore.Functions.Notify(Lang:t("vehicle_too_far"), 'error', 1250)
+									elseif IsPedInAnyVehicle(PlayerPedId(), true) then 
+										QBCore.Functions.Notify(Lang:t("inside_vehicle"), 'error', 1250)
+									else
+										if Config.FuelDebug then print("Attempting to Open Fuel menu for special vehicles.") end
+										TriggerEvent('cdn-fuel:client:RefuelMenu', 'special')
+									end
+								end
+							end
+						end)
+	
+						if Config.FuelDebug then
+							print('Player has entered the Heli or Plane Refuel Zone: ('..GeneratedName..')')
+						end
+					end
+				else
+					if HoldingSpecialNozzle then
+						QBCore.Functions.Notify(Lang:t("nozzle_cannot_reach"), 'error')
+						HoldingSpecialNozzle = false
+						if Config.PumpHose then
+							if Config.FuelDebug then
+								print("Deleting Rope: "..Rope)
+							end
+							RopeUnloadTextures()
+							DeleteObject(Rope)
+						end
+						DeleteObject(SpecialFuelNozzleObj)
+					end
+					if Config.PumpHose then
+						if Rope ~= nil then 
+							if Config.FuelDebug then
+								print("Deleting Rope: "..Rope)
+							end
+							RopeUnloadTextures()
+							DeleteObject(Rope)
+						end
+					end
+					-- Outside
+					if Config.Ox.DrawText then
+						lib.hideTextUI()
+					else
+						exports[Config.Core]:HideText()
+					end
+					PlayerInSpecialFuelZone = false
+					inGasStation = false
+					RefuelingType = nil
+					if Config.FuelDebug then
+						print('Player has exited the Heli or Plane Refuel Zone: ('..GeneratedName..')')
+					end
+				end
+			end)
+	
+			if currentLocation['prop'] then
+				local model = currentLocation['prop']['model']
+				local modelCoords = currentLocation['prop']['coords']
+				local heading = modelCoords[4] - 180.0
+				AirSeaFuelZones[k].prop = CreateObject(model, modelCoords.x, modelCoords.y, modelCoords.z, false, true, true)
+				if Config.FuelDebug then print("Created Special Pump from Location #"..i) end
+				SetEntityHeading(AirSeaFuelZones[k].prop, heading)
+				FreezeEntityPosition(AirSeaFuelZones[k].prop, 1)
+			else
+				if Config.FuelDebug then print("Location #"..i.." for Special Fueling Zones (Air and Sea) doesn't have a prop set up, so players cannot fuel here.") end
+			end
+	
+			if Config.FuelDebug then
+				print("Created Location: "..GeneratedName)
+			end
+		end
+	  end
+   end
+end)
+
+AddEventHandler("QBCore:Client:OnPlayerLoaded", function ()	
 	for i = 1, #Config.AirAndWaterVehicleFueling['locations'], 1 do
 		local currentLocation = Config.AirAndWaterVehicleFueling['locations'][i]
 		local k = #AirSeaFuelZones+1
@@ -2248,6 +2413,8 @@ CreateThread(function()
 			maxZ = maximumZ,
 			debugPoly = Config.PolyDebug
 		})
+
+		AirSeaFuelZones[k].name = GeneratedName
 
 		-- Setup onPlayerInOut Events for zone that is created.
 		AirSeaFuelZones[k].PolyZone:onPlayerInOut(function(isPointInside)
@@ -2295,7 +2462,7 @@ CreateThread(function()
 					else
 						exports[Config.Core]:DrawText(DrawText, 'left')
 					end
-					
+
 					CreateThread(function()
 						while PlayerInSpecialFuelZone do
 							Wait(3000)
@@ -2311,8 +2478,8 @@ CreateThread(function()
 							end
 							if IsControlJustReleased(0, Config.AirAndWaterVehicleFueling['refuel_button']) --[[ Control in Config ]] then
 								local vehCoords = GetEntityCoords(vehicle)
-								local dist = #(GetEntityCoords(PlayerPedId()) - vehCoords) 
-								
+								local dist = #(GetEntityCoords(PlayerPedId()) - vehCoords)
+
 								if not HoldingSpecialNozzle then
 									QBCore.Functions.Notify(Lang:t("no_nozzle"), 'error', 1250)
 								elseif dist > 4.5 then
@@ -2386,11 +2553,26 @@ CreateThread(function()
 	end
 end)
 
+AddEventHandler("QBCore:Client:OnPlayerUnload", function()
+	for i = 1, #AirSeaFuelZones, 1 do
+		AirSeaFuelZones[i].PolyZone:destroy()
+		if Config.FuelDebug then
+			print("Destroying Air Fuel PolyZone: "..AirSeaFuelZones[i].name)
+		end
+		if AirSeaFuelZones[i].prop then
+			if Config.FuelDebug then
+				print("Destroying Air Fuel Zone Pump: "..i)
+			end
+			DeleteObject(AirSeaFuelZones[i].prop)
+		end
+	end
+end)
+
 AddEventHandler('onResourceStop', function(resource)
 	if resource == GetCurrentResourceName() then
 		for i = 1, #AirSeaFuelZones, 1 do
 			DeleteObject(AirSeaFuelZones[i].prop)
-		end	
+		end
 	end
 end)
 
@@ -2440,73 +2622,77 @@ CreateThread(function()
 
 		exports.ox_target:addGlobalVehicle(options)
 
-		exports['qb-target']:AddTargetModel(props, {
-			options = {
-				{
-					num = 1,
-					type = "client",
-					event = "cdn-fuel:client:grabnozzle",
-					icon = "fas fa-gas-pump",
-					label = Lang:t("grab_nozzle"),
-					canInteract = function()
-						if PlayerInSpecialFuelZone then return false end
-						if not IsPedInAnyVehicle(PlayerPedId()) and not holdingnozzle and not HoldingSpecialNozzle and inGasStation == true and not PlayerInSpecialFuelZone then
-							return true
-						end
-					end,
-				},
-				{
-					num = 2,
-					type = "client",
-					event = "cdn-fuel:client:purchasejerrycan",
-					icon = "fas fa-fire-flame-simple",
-					label = Lang:t("buy_jerrycan"),
-					canInteract = function()
-						if not IsPedInAnyVehicle(PlayerPedId()) and not holdingnozzle and not HoldingSpecialNozzle and inGasStation == true then
-							return true
-						end
-					end,
-				},
-				{
-					num = 3,
-					type = "client",
-					event = "cdn-fuel:client:returnnozzle",
-					icon = "fas fa-hand",
-					label = Lang:t("return_nozzle"),
-					canInteract = function()
-						if holdingnozzle and not refueling then
-							return true
-						end
-					end,
-				},
-				{
-					num = 4,
-					type = "client",
-					event = "cdn-fuel:client:grabnozzle:special",
-					icon = "fas fa-gas-pump",
-					label = Lang:t("grab_special_nozzle"),
-					canInteract = function()
-						if Config.FuelDebug then print("Is Player In Special Fuel Zone?: "..tostring(PlayerInSpecialFuelZone)) end
-						if not HoldingSpecialNozzle and not IsPedInAnyVehicle(PlayerPedId()) and PlayerInSpecialFuelZone then
-							return true
-						end
-					end,
-				},
-				{
-					num = 5,
-					type = "client",
-					event = "cdn-fuel:client:returnnozzle:special",
-					icon = "fas fa-hand",
-					label = Lang:t("return_special_nozzle"),
-					canInteract = function()
-						if HoldingSpecialNozzle and not IsPedInAnyVehicle(PlayerPedId()) then
-							return true
-						end
+		local modelOptions = {
+			[1] = {
+				name = "cdn-fuel:modelOptions:option_1",
+				num = 1,
+				type = "client",
+				event = "cdn-fuel:client:grabnozzle",
+				icon = "fas fa-gas-pump",
+				label = Lang:t("grab_nozzle"),
+				canInteract = function()
+					if PlayerInSpecialFuelZone then return false end
+					if not IsPedInAnyVehicle(PlayerPedId()) and not holdingnozzle and not HoldingSpecialNozzle and inGasStation == true and not PlayerInSpecialFuelZone then
+						return true
 					end
-				},
+				end,
 			},
-			distance = 2.0
-		})
+			[2] = {
+				name = "cdn-fuel:modelOptions:option_2",
+				num = 2,
+				type = "client",
+				event = "cdn-fuel:client:purchasejerrycan",
+				icon = "fas fa-fire-flame-simple",
+				label = Lang:t("buy_jerrycan"),
+				canInteract = function()
+					if not IsPedInAnyVehicle(PlayerPedId()) and not holdingnozzle and not HoldingSpecialNozzle and inGasStation == true then
+						return true
+					end
+				end,
+			},
+			[3] = {
+				name = "cdn-fuel:modelOptions:option_3",
+				num = 3,
+				type = "client",
+				event = "cdn-fuel:client:returnnozzle",
+				icon = "fas fa-hand",
+				label = Lang:t("return_nozzle"),
+				canInteract = function()
+					if holdingnozzle and not refueling then
+						return true
+					end
+				end,
+			},
+			[4] = {
+				name = "cdn-fuel:modelOptions:option_4",
+				num = 4,
+				type = "client",
+				event = "cdn-fuel:client:grabnozzle:special",
+				icon = "fas fa-gas-pump",
+				label = Lang:t("grab_special_nozzle"),
+				canInteract = function()
+					if Config.FuelDebug then print("Is Player In Special Fuel Zone?: "..tostring(PlayerInSpecialFuelZone)) end
+					if not HoldingSpecialNozzle and not IsPedInAnyVehicle(PlayerPedId()) and PlayerInSpecialFuelZone then
+						return true
+					end
+				end,
+			},
+			[5] = {
+				name = "cdn-fuel:modelOptions:option_5",
+				num = 5,
+				type = "client",
+				event = "cdn-fuel:client:returnnozzle:special",
+				icon = "fas fa-hand",
+				label = Lang:t("return_special_nozzle"),
+				canInteract = function()
+					if HoldingSpecialNozzle and not IsPedInAnyVehicle(PlayerPedId()) then
+						return true
+					end
+				end
+			},
+		}
+
+		exports.ox_target:addModel(props, modelOptions)
 	else
 		exports[Config.TargetResource]:AddTargetBone(bones, {
 			options = {
@@ -2545,7 +2731,7 @@ CreateThread(function()
 			},
 			distance = 1.5,
 		})
-	
+
 		exports[Config.TargetResource]:AddTargetModel(props, {
 			options = {
 				{
@@ -2667,21 +2853,36 @@ if Config.VehicleShutoffOnLowFuel['shutOffLevel'] == 0 then
 	Config.VehicleShutoffOnLowFuel['shutOffLevel'] = 0.55
 end
 
--- This loop does use quite a bit of performance, but, is needed due to electric vehicles running without fuel & normal vehicles driving backwards! 
+-- This loop does use quite a bit of performance, but,
+-- is needed due to electric vehicles running without fuel & normal vehicles driving backwards!
 -- You can remove if you need the performance, but we believe it is very important.
 CreateThread(function()
 	while true do
 		Wait(0)
 		local ped = PlayerPedId()
 		local veh = GetVehiclePedIsIn(ped, false)
-		if veh ~= 0 then
+		if veh ~= 0 and veh ~= nil then
 			if not IsVehicleBlacklisted(veh) then
+				-- Check if we are below the threshold for the Fuel Shutoff Level, if so, disable the "W" key, if not, enable it again.
 				if IsPedInVehicle(ped, veh, false) and (GetIsVehicleEngineRunning(veh) == false) or GetFuel(veh) < (Config.VehicleShutoffOnLowFuel['shutOffLevel'] or 1) then
 					DisableControlAction(0, 71, true)
 				elseif IsPedInVehicle(ped, veh, false) and (GetIsVehicleEngineRunning(veh) == true) and GetFuel(veh) > (Config.VehicleShutoffOnLowFuel['shutOffLevel'] or 1) then
 					EnableControlAction(0, 71, true)
 				end
+				-- Now, we check if the fuel level is currently 5 above the level it should shut off,
+				-- if this is true, we will then enable the "W" key if currently disabled, and then,
+				-- we will add a 5 second wait, in order to reduce system impact.
+				if GetFuel(veh) > (Config.VehicleShutoffOnLowFuel['shutOffLevel'] + 5) then
+					if not IsControlEnabled(0, 71) then
+						-- Enable "W" Key if it is currently disabled.
+						EnableControlAction(0, 71, true)
+					end
+					Wait(5000)
+				end
 			end
+		else
+			-- 1.75 Second Cooldown if the player is not inside of a vehicle.
+			Wait(1750)
 		end
 	end
 end)

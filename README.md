@@ -1,23 +1,18 @@
 ![Codine Development Fuel Script Banner](https://i.imgur.com/qVOMMvW.png)
 
-# _CDN-Fuel (2.1.4)_ 
+# _CDN-Fuel (2.1.9)_ 
 
 A highly in-depth fuel system for **FiveM** with support for the **QBCore Framework & QBox Remastered**.
 
 # _Lastest Patch Information_
-*Additions:*
-- Various Optimizations Throughout
-- Config Option for Having Owners Pickup Reserves they Purchase
 
 *Fixes:*
-- Blip Color on Normal Blip not working.
-- [Jerry Can Flipped Orientation](https://github.com/dnelyk/cdn-grub-updates/assets/95599217/0489397e-99c9-43d9-8aab-0d4a45463cfd)
-- Various Syphoning Issues (Item Data / Input / Menu etc)
-- Various Jerry Can Issues (Similar to Syphon Issues)
-- Station Owners Not Recieving Full Price on Discounted Purchases
+- Jerry Cans not refuelling at pump.
+- Removed spamming debug print. 
+- Changed the way Air Fuel Zones spawn PolyZones and Props.
+- Player Job Error on load.
+- Syphoning Issue with QB-Inventory.
 
-*Removals:*
-- NPWD "Support" as there are various large issues.
 
 <br>
 <br>
@@ -130,6 +125,8 @@ Make sure to **ensure** this new resource as well as _cdn-fuel_ in your _server.
 *Otherwise, navigate to Step 6 & Step 7 below, and finish installation.*
 
 ### Step 6:
+***If you are using OX_Inventory, this step can be ignored.***
+<br><br>
 We will now be installing the Jerry Can & Syphoning Kit items into your server. You don't have to install either, but they are recommended additions. You can install them & disable them in the config, until you want to use them later on! 
 <br> <br>
 If you plan to not use them, you can skip this Step and Step 7!
